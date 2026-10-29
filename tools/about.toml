@@ -1,0 +1,33 @@
+# Matrix - Kod Yağmuru: Rust kitaplıklarının lisans metinlerini toplayan
+# cargo-about ayarı. Çıktı, tools/about.hbs şablonuyla
+# licenses/RustCrates-LICENSE.txt dosyasına yazılır.
+
+# Yalnız programla birlikte dağıtılan kitaplıklar sayılır; derleme sırasında
+# çalışıp programa girmeyen yardımcılar dışarıda kalır.
+ignore-build-dependencies = true
+ignore-dev-dependencies = true
+# Projenin kendi paketi (lisansı kökteki LICENSE dosyasındadır) sayılmaz.
+private = { ignore = true }
+
+# Bütün çıktıların hedefleri: Windows, Linux, macOS (Apple ve Intel), Android.
+targets = [
+    "x86_64-pc-windows-msvc",
+    "x86_64-unknown-linux-gnu",
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "aarch64-linux-android",
+    "x86_64-linux-android",
+]
+
+# Kabul edilen lisanslar. Listede olmayan bir lisans çıkarsa üretim durur;
+# lisans incelenip uygunsa buraya eklenir. Birden çok lisansla sunulan bir
+# kitaplık için listedeki ilk uygun lisans seçilir.
+accepted = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0",
+]

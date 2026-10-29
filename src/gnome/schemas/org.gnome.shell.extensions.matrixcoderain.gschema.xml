@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Matrix - Kod Yağmuru eklentisinin ayarları. -->
+<schemalist>
+  <schema id="org.gnome.shell.extensions.matrixcoderain"
+          path="/org/gnome/shell/extensions/matrixcoderain/">
+    <key name="start-delay" type="u">
+      <range min="1" max="120"/>
+      <default>2</default>
+      <summary>Başlama süresi (dakika)</summary>
+      <description>Bilgisayar bu kadar dakika boşta kalınca ekran koruyucu başlar. GNOME'un ekranı karartma süresinden kısa olmalıdır.</description>
+    </key>
+  </schema>
+</schemalist>

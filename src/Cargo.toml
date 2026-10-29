@@ -1,0 +1,75 @@
+# Matrix - Kod Yağmuru: Rust paketi.
+# Ortak çizim kitaplığı, masaüstü programı ve C bağlantısı aynı pakettedir.
+# Bu dosya src/ içindedir; kaynak yolları bu klasöre göre yazılır.
+[package]
+name = "matrixcoderain"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.98"
+license = "GPL-3.0-or-later"
+description = "Matrix - Kod Yağmuru ekran koruyucusu"
+repository = "https://github.com/atifdag/matrixcoderain"
+# crates.io'ya gönderilmez. Lisans listesi üretilirken de bu yüzden dışarıda kalır.
+publish = false
+
+# Ortak kitaplık. Rust programları doğrudan kullanır; macOS ekran koruyucusu ve
+# iPhone uygulaması durağan kitaplığı (staticlib), Android ise paylaşılan
+# kitaplığı (cdylib) yükler.
+[lib]
+name = "matrix_core"
+path = "lib.rs"
+crate-type = ["rlib", "cdylib", "staticlib"]
+
+# Windows, macOS ve Linux için masaüstü programı.
+[[bin]]
+name = "matrixcoderain"
+path = "desktop/main.rs"
+required-features = ["desktop"]
+
+[features]
+default = ["desktop"]
+# Pencere açan masaüstü programı ve ona gereken sistem kitaplıkları.
+desktop = ["dep:winit", "dep:softbuffer", "dep:chrono", "dep:windows-sys", "dep:x11-dl", "dep:libc"]
+# Kitaplığı C üzerinden çağrılabilir yapar; macOS, iPhone ve Android bunu kullanır.
+ffi = []
+# Yalnız tools/ffi_host_test.ps1 denemesinde kullanılan, bilerek hata üreten
+# deneme çağrısını ekler.
+ffi-test = ["ffi"]
+
+[dependencies]
+tiny-skia = { version = "0.11", default-features = false, features = ["std"] }
+fontdue = "0.9"
+ttf-parser = "0.25"
+font8x8 = { version = "0.3", features = ["unicode"] }
+winit = { version = "0.30", optional = true }
+softbuffer = { version = "0.4", optional = true }
+chrono = { version = "0.4", default-features = false, features = ["clock"], optional = true }
+
+# Windows: önizleme penceresi, mesaj kutusu ve ekran gücü bildirimleri.
+[target.'cfg(windows)'.dependencies.windows-sys]
+version = "0.61"
+optional = true
+features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_System_Power"]
+
+# Linux: xscreensaver'ın verdiği X11 penceresinin boyutunu okumak için.
+[target.'cfg(target_os = "linux")'.dependencies.x11-dl]
+version = "2.21"
+optional = true
+
+# Linux, yalnız hata ayıklama derlemesinde: xscreensaver'ın kapatma sinyalini
+# (SIGTERM) beklemek için. Sürüm derlemesinde kullanılmaz ve programa girmez.
+[target.'cfg(target_os = "linux")'.dependencies.libc]
+version = "0.2"
+optional = true
+
+# Android: Kotlin kodundan gelen çağrıların türleri.
+[target.'cfg(target_os = "android")'.dependencies]
+jni-sys = "0.4"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+# C üzerinden çağıran uygulama, yakalanabilir bir Rust hatasında kapanmamalı.
+panic = "unwind"
+strip = true

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Uygulama simgesinin ön yüzü: aşağı doğru parlaklaşan üç yağmur sütunu.
+     Renkler ekrandaki yağmurla aynıdır; çizim simgenin güvenli orta alanında kalır. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Kuyruk: en soluk harfler. -->
+    <path
+        android:fillAlpha="0.3"
+        android:fillColor="#00FF46"
+        android:pathData="M34,30h6v6h-6z M51,42h6v6h-6z M68,34h6v6h-6z" />
+    <path
+        android:fillAlpha="0.55"
+        android:fillColor="#00FF46"
+        android:pathData="M34,38h6v6h-6z M51,50h6v6h-6z M68,42h6v6h-6z" />
+    <path
+        android:fillAlpha="0.8"
+        android:fillColor="#00FF46"
+        android:pathData="M34,46h6v6h-6z M51,58h6v6h-6z M68,50h6v6h-6z" />
+    <!-- Baş harfler: en parlak, beyaza yakın yeşil. -->
+    <path
+        android:fillColor="#D2FFD2"
+        android:pathData="M34,54h6v6h-6z M51,66h6v6h-6z M68,58h6v6h-6z" />
+</vector>

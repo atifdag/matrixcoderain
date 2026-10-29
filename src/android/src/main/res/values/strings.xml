@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kullanıcıya görünen metinler. -->
+<resources>
+    <string name="app_name">Matrix - Kod Yağmuru</string>
+    <string name="info">Bu uygulama bir ekran koruyucudur. Telefon şarjdayken ve boşta kaldığında sistem tarafından başlatılır; normal kullanımda görünmez.\n\nAyarlar › Ekran › Ekran koruyucu bölümünden “Matrix - Kod Yağmuru” seçeneğini seçin. Aynı sayfadaki önizleme ile hemen deneyebilirsiniz.\n\nEkran kilidi, PIN ve parmak izi telefonun kendi sistemindedir; bu uygulama onları değiştirmez.</string>
+    <string name="open_settings">Ekran koruyucu ayarlarını aç</string>
+</resources>

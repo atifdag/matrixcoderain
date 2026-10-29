@@ -1,0 +1,17 @@
+# Ara derleme dosyaları. Son çıktılar build/<platform> altında Git'e eklenir.
+/src/target/
+/build/gradle/
+*.pdb
+*.rs.bk
+rustc-ice-*.txt
+**/mutants.out*/
+
+# Android Studio ve Gradle'ın proje klasöründe tuttuğu önbellek ve yerel ayarlar.
+/src/android/.gradle/
+/src/android/.kotlin/
+/src/android/build/
+/src/android/.idea/
+/src/android/local.properties
+
+# macOS Finder'ın klasör ayarları.
+.DS_Store

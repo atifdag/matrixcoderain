@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Matrix - Kod Yağmuru: macOS ekran koruyucu paketinin tanımı.
+     @VERSION@ değerini derleme betiği Cargo.toml dosyasındaki sürümle doldurur. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>tr</string>
+    <key>CFBundleExecutable</key>
+    <string>MatrixKodYagmuru</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.atifdag.matrixcoderain.saver</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>Matrix - Kod Yağmuru</string>
+    <key>CFBundlePackageType</key>
+    <string>BNDL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>@VERSION@</string>
+    <key>CFBundleVersion</key>
+    <string>@VERSION@</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>11.0</string>
+    <key>NSPrincipalClass</key>
+    <string>MatrixKodYagmuruView</string>
+</dict>
+</plist>

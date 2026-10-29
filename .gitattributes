@@ -1,0 +1,11 @@
+# Satır sonları: Unix betikleri her sistemde LF, Windows betikleri CRLF kalır.
+# Aksi halde Windows'ta alınan kopya macOS ve Linux'ta çalışmaz.
+*.sh text eol=lf
+gradlew text eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.jar binary
+*.otf binary
+*.ttf binary
+*.scr binary
+*.apk binary

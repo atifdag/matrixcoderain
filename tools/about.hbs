@@ -1,0 +1,29 @@
+{{!-- Matrix - Kod Yağmuru: licenses/RustCrates-LICENSE.txt şablonu (cargo-about).
+Her lisans metni bir kez yazılır; altında onu kullanan kitaplıklar listelenir.
+Üç süslü parantez, metnin olduğu gibi (HTML'ye çevrilmeden) yazılmasını sağlar. --}}
+Matrix - Kod Yağmuru: Rust kitaplıkları
+
+Programa derlenen Rust kitaplıkları ve lisansları aşağıdadır. Liste bütün
+çıktıları (Windows, Linux, macOS, Android) kapsar; bir çıktı bunların yalnız
+bir kısmını içerebilir.
+
+Rust standart kitaplığı da programa derlenir:
+Copyright (c) The Rust Project Contributors. MIT veya Apache-2.0 lisanslıdır;
+iki lisansın metni de aşağıdadır.
+
+Özet:
+{{#each overview}}
+- {{{name}}}: {{count}} kitaplık
+{{/each}}
+{{#each licenses}}
+
+===========================================================================
+{{{name}}} ({{id}})
+
+Kullanan kitaplıklar:
+{{#each used_by}}
+- {{crate.name}} {{crate.version}}
+{{/each}}
+
+{{{text}}}
+{{/each}}
