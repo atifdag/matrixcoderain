@@ -314,7 +314,7 @@ Otomatik testler kodun doğru derlendiğini ve çizim kurallarını gösterir; g
 | GNOME | Video oynatırken başlama süresini bekleyin | Matrix açılmaz |
 | GNOME | Matrix açıkken GNOME'un karartma süresini bekleyin | GNOME karartır ve Matrix kapanır; uyanınca kilit ekranını GNOME gösterir |
 | GNOME | Matrix açıkken Super+L | Kilit ekranı gelir; Matrix kapanır |
-| GNOME (X11 oturumu) | Başlama süresi kadar boşta kalın, sonra bir tuşa basın | Matrix her ekranda tam ekran ve en üstte açılır; ilk tuş Matrix'e gider ve onu kapatır |
+| GNOME (X11 oturumu) | Başlama süresi kadar boşta kalın; Matrix açılınca fareye dokunmadan bekleyin, sonra bir tuşa basın | Matrix her ekranda tam ekran ve en üstte açılır, kendi kendine kapanmaz; ilk tuş Matrix'e gider ve onu kapatır |
 | GNOME 42–48 | Eklenti ayarlarını açın, başlama süresini değiştirin | Ayar penceresi açılır; yeni süre bir sonraki boşta kalmada geçerlidir |
 | Android | Şarjda, boşta; ekrana dokunun | Ekran koruyucu açılır; dokununca kapanır |
 | Android | Ekran koruyucu açıkken ekranı güç tuşuyla kapatın | Çizim durur; PIN ve parmak izi ekranı değişmez |

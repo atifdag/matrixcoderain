@@ -34,8 +34,9 @@ pub enum Mode {
 
 /// İki çizim arasındaki süre.
 const FRAME: Duration = Duration::from_millis(FRAME_MS);
-/// Açılıştan sonra bu süre içindeki tuş ve tıklamalar yok sayılır; sistemin
-/// ekran koruyucuyu başlatırken ürettiği olaylar onu hemen kapatmasın.
+/// Açılıştan sonra bu süre içindeki tuş ve tıklamalar yok sayılır, fare hareketi
+/// yalnız başlangıç konumunu günceller; sistemin ekran koruyucuyu başlatırken
+/// ürettiği olaylar onu hemen kapatmasın.
 const INPUT_GRACE: Duration = Duration::from_millis(500);
 /// Açılıştaki odak değişiklikleri bu süre boyunca kapanma sebebi sayılmaz.
 const FOCUS_GRACE: Duration = Duration::from_millis(1500);
@@ -426,13 +427,20 @@ impl ApplicationHandler for App {
             }
 
             // Fare hareketi: ilk konum başlangıç kabul edilir, eşikten fazla uzaklaşınca çıkılır.
+            // X11'de pencere önce normal boyutta açılıp sonra tam ekrana geçer; aynı fare
+            // konumu pencereye göre kayar. Bu yüzden açılış sırasında gelen konumlar yalnız
+            // başlangıcı günceller.
             WindowEvent::CursorMoved { position, .. } if saver => {
+                let opening = Instant::now() < self.input_ready;
                 let Some(view) = self.views.get_mut(&id) else {
                     return;
                 };
-                let Some(origin) = view.mouse_origin else {
-                    view.mouse_origin = Some(position);
-                    return;
+                let origin = match view.mouse_origin {
+                    Some(origin) if !opening => origin,
+                    _ => {
+                        view.mouse_origin = Some(position);
+                        return;
+                    }
                 };
                 let (dx, dy) = (position.x - origin.x, position.y - origin.y);
                 if dx.abs() > MOUSE_THRESHOLD || dy.abs() > MOUSE_THRESHOLD {
