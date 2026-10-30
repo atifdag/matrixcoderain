@@ -14,6 +14,8 @@ Rust 1.98 veya sonrası gerekir.
 ./tools/build.ps1
 ```
 
+Windows, ekranın açık veya kapalı olduğunu tek tek ekranlar için değil oturumun bütünü için bildirir. Bu yüzden ekranlardan yalnız biri kapatılırsa o ekranın çizimi de sürer; bütün ekranlar kapanınca çizim durur.
+
 ### macOS
 
 Xcode komut satırı araçları ve Rust gerekir.
@@ -50,17 +52,38 @@ Rust 1.98 veya sonrası ve bir C bağlayıcısı gerekir (Debian ve Ubuntu'da `b
 ./tools/build.sh
 ```
 
-### GNOME (Ubuntu 26.04)
+Program glibc'ye bağlıdır ve derlendiği sistemin glibc sürümlerini alır. Ubuntu 26.04'te (glibc 2.43) derlenen program Ubuntu 24.04'te açılmaz. Bu yüzden Linux çıktıları Ubuntu 24.04 veya 22.04'te derlenir; Windows'ta WSL'deki Ubuntu 24.04 yeterlidir. Böyle derlenen program glibc 2.34 ister ve Ubuntu 22.04'te de çalışır.
 
-GNOME Shell kurulu bir Linux'ta (`gnome-extensions` aracı gerekir):
+Betik derlemeden sonra programın istediği glibc sürümlerini `readelf -V` ile okur; sürüm 2.35'i (Ubuntu 22.04) aşarsa durur. glibc, program açılırken bu listedeki her sürümü arar; sembolün zayıf bağlı olması yetmez. Örneğin Rust'ın standart kitaplığı alt süreç başlatan kodda `pidfd_spawnp` ve `pidfd_getpid` sembollerini zayıf bağlar, yine de Ubuntu 24.04'te derlenen programın listesine zorunlu `GLIBC_2.39` girer. Programın kendisi alt süreç başlatmaz. Bu kodu getiren tek bağımlılık winit'in Adwaita görünümlü Wayland pencere çerçevesiydi (`wayland-csd-adwaita`; temayı okumak için `dbus-send` çalıştırır), bu yüzden o özellik `Cargo.toml`'da kapalıdır. Ekran koruyucu pencereleri çerçevesizdir; yalnız Wayland'deki deneme penceresi (`/w`) düz yedek çerçeveyle açılır. Yeni bir bağımlılık alt süreç başlatırsa betik derlemeyi durdurur.
+
+### GNOME
+
+Linux'ta, GNOME kurulu olmasa da (ör. WSL); `zip` ve `glib-compile-schemas` (`libglib2.0-bin`) gerekir:
 
 ```bash
 ./tools/build.sh gnome
 ```
 
-Linux programı derlenir ve eklentiyle birlikte `build/gnome/matrixcoderain@atifdag.github.io.shell-extension.zip` paketine konur. Eklentinin kaynakları `src/gnome/` altındadır: `extension.js` boşta kalmayı izler ve programı yönetir, `prefs.js` ayar penceresidir, `schemas/` ayar şemasıdır. Sürüm numarası `metadata.json` dosyasına derlemede yazılır.
+Linux programı derlenir ve eklentiyle birlikte `build/gnome` altındaki iki pakete konur. GNOME 45'te eklenti biçimi değiştiği (ESM) için tek paket bütün sürümlerde yüklenmez:
 
-Eklenti, programı GNOME Shell'in kendi açtığı bir Wayland bağlantısıyla (`Meta.WaylandClient`) başlatır; böylece pencereleri kesin tanınır, pencere listesinden gizlenir, en üste alınır ve etkinleştirilir. Çizim GNOME Shell'in içinde yapılmaz: WebAssembly ile denendiğinde 2560 × 1440'lık her karenin GNOME Shell'e aktarılması 7–10 ms sürdü ve masaüstünü yavaşlatacağı için bu yol bırakıldı. Eklenti yalnız GNOME 50 için işaretlidir; GNOME'un her yeni ana sürümünde denenip `metadata.json` içindeki `shell-version` listesine eklenmelidir.
+| Paket | GNOME | Kaynak |
+|---|---|---|
+| `matrixcoderain@atifdag.github.io.shell-extension.zip` | 46–50 | `src/gnome/` |
+| `matrixcoderain@atifdag.github.io.gnome-42-44.shell-extension.zip` | 42–44 | `src/gnome/legacy/` |
+
+Eklentinin kaynakları: `extension.js` boşta kalmayı izler ve programı yönetir, `prefs.js` ayar penceresidir, `src/gnome/schemas/` iki paketin ortak ayar şemasıdır. Sürüm numarası `metadata.json` dosyasına derlemede yazılır. `legacy/` klasörü GNOME 45 öncesinin `imports` biçimiyle yazılmış kopyadır; davranış değişikliği iki klasöre birlikte yapılır. GNOME 44 ve sonrası ayar şemasını kurulumda kendisi derler; GNOME 42–44 paketine derlenmiş şema (`gschemas.compiled`) da konur.
+
+Eklenti programı oturuma ve GNOME sürümüne göre başlatır:
+
+| Oturum | GNOME | Başlatma | Pencerenin tanınması |
+|---|---|---|---|
+| Wayland | 49–50 | `Meta.WaylandClient.new_subprocess` | `owns_window`; pencere listesinden `window.hide_from_window_list()` ile gizlenir |
+| Wayland | 42–48 | `Meta.WaylandClient.new` ve `spawnv` (GNOME 44 öncesi `global.context` almaz) | `owns_window`; `client.hide_from_window_list(window)` ile gizlenir |
+| X11 | 42–49 | Sıradan alt süreç (`Gio.SubprocessLauncher`) | Süreç numarası (`window.get_pid()`); X11'de pencere listesinden gizleme yoktur |
+
+Wayland'de program, GNOME Shell'in açtığı özel bir bağlantıyla başlar; böylece pencereleri kesin tanınır. Her yolda pencere en üste alınır ve etkinleştirilir. GNOME 50 X11 desteğini kaldırdığı için `Meta.is_wayland_compositor` işlevi orada yoktur; eklenti bu durumda oturumu Wayland sayar. Çizim GNOME Shell'in içinde yapılmaz: WebAssembly ile denendiğinde 2560 × 1440'lık her karenin GNOME Shell'e aktarılması 7–10 ms sürdü ve masaüstünü yavaşlatacağı için bu yol bırakıldı.
+
+Eklenti GNOME 50'de denenmiştir. Diğer sürümlerdeki yollar GNOME ve mutter kaynaklarındaki API'ye göre yazılmıştır; her sürüm cihazda denendikçe aşağıdaki deneme listesiyle doğrulanır. GNOME'un her yeni ana sürümü denenip `src/gnome/metadata.json` içindeki `shell-version` listesine eklenir.
 
 ### Android
 
@@ -205,6 +228,8 @@ sudo apt-get install mutter-dev-bin
 )
 ```
 
+Bu komutlar GNOME 49 ve sonrası içindir. GNOME 42–48'de iç içe oturum `mutter-dev-bin` olmadan `gnome-shell --nested --wayland` ile açılır; GNOME 42–44'te yukarıdaki paket adı `gnome-42-44` paketiyle değiştirilir. X11 yolu iç içe oturumda denenemez; gerçek X11 oturumunda (giriş ekranında **Ubuntu on Xorg**) denenir.
+
 - İç içe oturumda oturum yöneticisi (gnome-session) çalışmaz. Bu yüzden GNOME Shell'in kaydındaki "boşta kalma engeli okunamadı" uyarısı normaldir; eklenti bu durumda engel yokmuş gibi davranır. Aynı nedenle GNOME'un kendi karartması süreyle gelmez; iç içe oturumun yolunda `gdbus` ile `org.gnome.ScreenSaver.SetActive true` (karartma) ve `org.gnome.ScreenSaver.Lock` (kilit) çağrılarak denenir.
 - Eklentide yapılan değişiklik için iç içe GNOME Shell kapatılıp yeniden açılır. Gerçek oturumun GNOME Shell'i de aynı adı taşıdığı için süreç adıyla kapatma (`pkill gnome-shell`) kullanılmaz; iç içe olanın süreç numarası kullanılır.
 - Program, GNOME Shell'in ortam değişkenlerini alır; kayıt için `MATRIXCODERAIN_LOG` iç içe GNOME Shell'e verilir. Eklentinin iletileri GNOME Shell'in çıktısına yazılır.
@@ -289,6 +314,8 @@ Otomatik testler kodun doğru derlendiğini ve çizim kurallarını gösterir; g
 | GNOME | Video oynatırken başlama süresini bekleyin | Matrix açılmaz |
 | GNOME | Matrix açıkken GNOME'un karartma süresini bekleyin | GNOME karartır ve Matrix kapanır; uyanınca kilit ekranını GNOME gösterir |
 | GNOME | Matrix açıkken Super+L | Kilit ekranı gelir; Matrix kapanır |
+| GNOME (X11 oturumu) | Başlama süresi kadar boşta kalın, sonra bir tuşa basın | Matrix her ekranda tam ekran ve en üstte açılır; ilk tuş Matrix'e gider ve onu kapatır |
+| GNOME 42–48 | Eklenti ayarlarını açın, başlama süresini değiştirin | Ayar penceresi açılır; yeni süre bir sonraki boşta kalmada geçerlidir |
 | Android | Şarjda, boşta; ekrana dokunun | Ekran koruyucu açılır; dokununca kapanır |
 | Android | Ekran koruyucu açıkken ekranı güç tuşuyla kapatın | Çizim durur; PIN ve parmak izi ekranı değişmez |
 | Android | 30 dakika çalıştırın | Isınma ve pil kullanımı kabul edilebilir; ölçüm kaydındaki yüzde 95 çizim süresi 66 ms'nin (saniyede 15 kare) altında |
@@ -307,7 +334,7 @@ Otomatik testler kodun doğru derlendiğini ve çizim kurallarını gösterir; g
 | `src/ffi.rs`, `src/matrix.h` | C bağlantısı. macOS, iPhone ve Android motoru buradan kullanır. |
 | `src/jni.rs` | Android'in Kotlin kodundan C bağlantısına geçiş. |
 | `src/desktop/` | Windows `.scr`, Linux xscreensaver bağlantısı ve deneme penceresi. GNOME eklentisi de bu programı çalıştırır. |
-| `src/gnome/` | Ubuntu 26.04 ve GNOME için GNOME Shell eklentisi; boşta kalmayı izler, programı başlatır ve kapatır. |
+| `src/gnome/` | GNOME 46–50 için GNOME Shell eklentisi; boşta kalmayı izler, programı başlatır ve kapatır. `legacy/` aynı eklentinin GNOME 42–44 kopyasıdır. |
 | `src/macos/` | macOS `.saver` paketi. |
 | `src/android/` | Android ekran koruyucu uygulaması. |
 | `src/ios/` | iPhone uygulaması. |

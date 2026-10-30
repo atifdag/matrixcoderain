@@ -2,7 +2,7 @@
   "uuid": "matrixcoderain@atifdag.github.io",
   "name": "Matrix - Kod Yağmuru",
   "description": "Bilgisayar boşta kalınca Matrix tarzı kod yağmurunu ve saati tam ekran gösteren ekran koruyucu. Ekranı karartma, kilit ve parola GNOME'da kalır.",
-  "shell-version": ["50"],
+  "shell-version": ["46", "47", "48", "49", "50"],
   "url": "https://github.com/atifdag/matrixcoderain",
   "settings-schema": "org.gnome.shell.extensions.matrixcoderain",
   "version-name": "@VERSION@"

@@ -5,8 +5,8 @@
 #   ./tools/build.sh            Bu sistemin çıktısı
 #                               macOS: .saver ekran koruyucusu -> build/macos
 #                               Linux: xscreensaver programı   -> build/linux
-#   ./tools/build.sh gnome      GNOME Shell eklentisi (ör. Ubuntu 26.04)
-#                               (Linux'ta)                     -> build/gnome
+#   ./tools/build.sh gnome      GNOME Shell eklentisi: GNOME 46–50 ve
+#                               GNOME 42–44 paketi (Linux'ta)   -> build/gnome
 #   ./tools/build.sh android    Android uygulaması             -> build/android
 #   ./tools/build.sh ios        iPhone uygulaması: simülatör paketi ve
 #                               telefon için imzasız .ipa (macOS'ta) -> build/ios
@@ -60,9 +60,29 @@ build_macos() {
   printf 'Hazır: %s\n' "$PWD/$bundle"
 }
 
+# Linux programının isteyebileceği en yeni glibc: Ubuntu 22.04'teki 2.35.
+# Program, derlendiği sistemin glibc sürümlerini alır. Daha yeni bir sistemde
+# derlenirse eski sistemlerde açılmaz; ör. Ubuntu 26.04'te derlenen program
+# Ubuntu 24.04'te glibc 2.43 ister. Bu yüzden Ubuntu 24.04 veya 22.04'te
+# derlenir.
+max_glibc=2.35
+
 # Linux masaüstü programını derler; xscreensaver çıktısı ve GNOME eklentisi bunu kullanır.
 build_linux_program() {
   cargo build --manifest-path "$manifest" --release --locked --bin matrixcoderain
+  check_glibc src/target/release/matrixcoderain
+}
+
+# Programın istediği glibc sürümü sınırı aşıyorsa betiği durdurur. Sürümler,
+# glibc'nin program açılırken denetlediği sürüm listesinden (readelf -V)
+# okunur. Sembolün zayıf bağlı olması yetmez: listede "WEAK" işareti
+# olmayan bir sürüm glibc'de yoksa program açılmaz.
+check_glibc() {
+  local need
+  need="$(readelf -V "$1" | grep 'Name: GLIBC_[0-9]' | grep -v 'Flags: WEAK' | grep -o 'GLIBC_[0-9][0-9.]*' | sed 's/^GLIBC_//' | sort -uV | tail -n 1)"
+  if [ "$(printf '%s\n%s\n' "$need" "$max_glibc" | sort -V | tail -n 1)" != "$max_glibc" ]; then
+    fail "Program glibc $need istiyor; en çok $max_glibc olmalı (Ubuntu 22.04). Daha eski bir sistemde derleyin."
+  fi
 }
 
 # Linux programı: xscreensaver'ın verdiği pencereye çizer.
@@ -73,20 +93,39 @@ build_linux() {
   printf 'Hazır: %s\n' "$PWD/build/linux"
 }
 
-# GNOME Shell eklentisi (ör. Ubuntu 26.04): Linux programı eklentinin içine
-# konur; eklenti onu bilgisayar boşta kalınca başlatır.
+# GNOME Shell eklentisi: Linux programı eklentinin içine konur; eklenti onu
+# bilgisayar boşta kalınca başlatır. GNOME 45'te eklenti biçimi değiştiği için
+# iki paket çıkar:
+# - GNOME 46–50 (ör. Ubuntu 24.04 ve 26.04): src/gnome
+# - GNOME 42–44 (ör. Ubuntu 22.04, Debian 12): src/gnome/legacy
 build_gnome() {
-  command -v gnome-extensions >/dev/null || fail "gnome-extensions bulunamadı; GNOME Shell kurulu bir sistemde çalıştırın."
-  local work=src/target/gnome
+  command -v zip >/dev/null || fail "zip bulunamadı."
+  command -v glib-compile-schemas >/dev/null || fail "glib-compile-schemas bulunamadı (Debian ve Ubuntu'da libglib2.0-bin)."
   build_linux_program
-  rm -rf "$work"
-  mkdir -p "$work" build/gnome
-  cp src/gnome/extension.js src/gnome/prefs.js src/target/release/matrixcoderain "$work/"
-  sed "s/@VERSION@/$version/g" src/gnome/metadata.json >"$work/metadata.json"
-  # Ayar şemasını gnome-extensions derleyip pakete koyar.
-  gnome-extensions pack "$work" --force --out-dir build/gnome --extra-source=matrixcoderain \
-    --schema="$PWD/src/gnome/schemas/org.gnome.shell.extensions.matrixcoderain.gschema.xml"
+  mkdir -p build/gnome
+  pack_gnome src/gnome matrixcoderain@atifdag.github.io.shell-extension.zip
+  # GNOME 44 öncesi ayar şemasını kendisi derlemez; derlenmiş şema pakete konur.
+  pack_gnome src/gnome/legacy matrixcoderain@atifdag.github.io.gnome-42-44.shell-extension.zip compile
   printf 'Hazır: %s\n' "$PWD/build/gnome"
+}
+
+# Bir eklenti paketini build/gnome altına yazar. Girdiler: eklentinin kaynak
+# klasörü, paketin adı ve ayar şemasının derlenip derlenmeyeceği.
+pack_gnome() {
+  local source=$1 name=$2 compile=${3:-} work
+  # Paket geçici bir Linux klasöründe hazırlanır; programın çalıştırılabilir
+  # olması gibi dosya izinleri Windows diskinde (WSL) de doğru kalır.
+  work="$(mktemp -d)"
+  mkdir -p "$work/schemas"
+  cp "$source/extension.js" "$source/prefs.js" src/target/release/matrixcoderain "$work/"
+  cp src/gnome/schemas/*.gschema.xml "$work/schemas/"
+  sed "s/@VERSION@/$version/g" "$source/metadata.json" >"$work/metadata.json"
+  [ -z "$compile" ] || glib-compile-schemas "$work/schemas"
+  chmod 644 "$work"/*.js "$work/metadata.json" "$work"/schemas/*
+  chmod 755 "$work/matrixcoderain" "$work/schemas"
+  rm -f "build/gnome/$name"
+  (cd "$work" && zip -qrX "$OLDPWD/build/gnome/$name" .)
+  rm -rf "$work"
 }
 
 # Android uygulaması: Rust kitaplığını ve APK'yı Gradle derler. Gradle'ın

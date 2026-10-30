@@ -12,14 +12,15 @@ Matrix tarzı akan karakterleri, ortada yedi parçalı bir dijital saati ve alt 
 
 ## İndirme
 
-Kurmak için derleme gerekmez; hazır paketler depodaki `build/` klasöründedir. Depoyu GitHub'da **Code › Download ZIP** ile indirip açın ve platformunuzun klasörünü kullanın.
+Kuruluma hazır paketler depodaki `build/` klasöründedir. Depoyu GitHub'da **Code › Download ZIP** ile indirip açın ve platformunuzun klasörünü kullanın.
 
 | Platform | Nasıl çalışır | Hazır paket |
 |---|---|---|
 | Windows 10/11 | Sistem ayarlarından seçilen ekran koruyucu; çoklu ekran ve küçük önizleme | [build/windows](build/windows): `Matrix - Kod Yağmuru.scr` |
 | macOS 11 ve sonrası | Sistem Ayarları'ndan seçilen ekran koruyucu; Apple ve Intel işlemciler | [build/macos](build/macos): `Matrix - Kod Yağmuru.saver` |
-| Ubuntu 26.04 ve GNOME 50 | GNOME Shell eklentisi; boşta kalınca tam ekran çizer, karartma ve kilit GNOME'da kalır | [build/gnome](build/gnome): `matrixcoderain@atifdag.github.io.shell-extension.zip` |
-| Linux (X11) | xscreensaver'ın açtığı pencereye çizim; kilidi xscreensaver yönetir | [build/linux](build/linux): `matrixcoderain` |
+| Ubuntu 24.04 ve 26.04 (GNOME 46–50) | GNOME eklentisi; boşta kalınca tam ekran açılır, karartma ve kilit GNOME'da kalır | [build/gnome](build/gnome): `matrixcoderain@atifdag.github.io.shell-extension.zip` |
+| Ubuntu 22.04 ve Debian 12 (GNOME 42–44) | Aynı GNOME eklentisi, bu sürümler için ayrı paket | [build/gnome](build/gnome): `matrixcoderain@atifdag.github.io.gnome-42-44.shell-extension.zip` |
+| Xfce gibi diğer Linux masaüstleri (Xorg) | xscreensaver'ın ekran koruyucusu; kilidi xscreensaver yönetir. Ubuntu 22.04, Debian 12 ve sonrası | [build/linux](build/linux): `matrixcoderain` |
 | Diğer Wayland masaüstleri (ör. KDE) | Desteklenmiyor. Bu masaüstleri ekran koruyucuyu kendileri çizer. | — |
 | Android 8 ve sonrası | Sistemin ekran koruyucu listesinde görünür; şarjda ve boştayken çalışır | [build/android](build/android): `matrixcoderain.apk` |
 | iPhone (iOS 15 ve sonrası) | Ekran koruyucu değil; açıkken yağmuru ve saati gösteren uygulama. Kendi Apple hesabınızla imzalanarak kurulur. | [build/ios](build/ios): `matrixcoderain.ipa` |
@@ -32,7 +33,7 @@ Kurmak için derleme gerekmez; hazır paketler depodaki `build/` klasöründedir
 
 Ayarlara daha sonra **Ayarlar › Kişiselleştirme › Kilit ekranı › Ekran koruyucu** yolundan ulaşılır. Win+L ile açılan kilit ekranı Windows'a aittir ve değişmez.
 
-Windows, ekranın açık veya kapalı olduğunu tek tek ekranlar için değil oturumun bütünü için bildirir. Bu yüzden ekranlardan yalnız biri kapatılırsa o ekranın çizimi de sürer; bütün ekranlar kapanınca çizim durur.
+Birden çok ekranda yalnız biri kapatılırsa o ekranda da çizim sürer; bütün ekranlar kapanınca çizim durur.
 
 Kaldırmak için ekran koruyucu ayarlarında **(Yok)** ya da başka bir ekran koruyucu seçilir, ardından `.scr` dosyası silinir.
 
@@ -48,11 +49,22 @@ Hazır paket Apple geliştirici imzası taşımaz. Başka bir Mac'te macOS paket
 
 Kaldırmak için Sistem Ayarları kapatılır ve `Matrix - Kod Yağmuru.saver` paketi silinir. Paket yalnız sizin için kurulduysa `~/Library/Screen Savers/`, bütün kullanıcılar için kurulduysa `/Library/Screen Savers/` klasöründedir.
 
-## Ubuntu 26.04 ve GNOME
+## Ubuntu ve GNOME
 
-Ubuntu 26.04'ün GNOME masaüstünde ekran koruyucu bir GNOME Shell eklentisidir. Eklenti GNOME 50 içindir; GNOME'un başka sürümlerinde yüklenmez. Bilgisayar ayarlanan süre kadar boşta kalınca Matrix her ekranda tam ekran açılır; bir tuş, tıklama veya fare hareketiyle kapanır. Ekranı karartma, kilit ve parola GNOME'da kalır: GNOME ekranı karartmaya veya kilitlemeye başlayınca Matrix kapanır. Video izlerken olduğu gibi bir uygulama boşta kalmayı engelliyorsa Matrix açılmaz.
+GNOME masaüstünde ekran koruyucu bir GNOME eklentisidir. Bilgisayar ayarlanan süre kadar boşta kalınca Matrix her ekranda tam ekran açılır; bir tuş, tıklama veya fare hareketiyle kapanır. Ekranı karartma, kilit ve parola GNOME'da kalır: GNOME ekranı karartmaya veya kilitlemeye başlayınca Matrix kapanır. Video izlerken olduğu gibi bir uygulama boşta kalmayı engelliyorsa Matrix açılmaz.
 
-1. Eklentiyi kurun:
+Eklenti, giriş ekranında seçilen oturum ne olursa olsun çalışır (ör. **Ubuntu** veya **Ubuntu on Xorg**). Xorg oturumunda Matrix açıkken Alt+Tab listesinde görünür.
+
+GNOME sürümüne göre iki paket vardır. GNOME sürümü **Ayarlar** uygulamasının **Hakkında** bölümünde ya da `gnome-shell --version` komutuyla görülür:
+
+| GNOME | Örnek sistem | Paket |
+|---|---|---|
+| 46–50 | Ubuntu 24.04, Ubuntu 26.04, Debian 13 | `matrixcoderain@atifdag.github.io.shell-extension.zip` |
+| 42–44 | Ubuntu 22.04, Debian 12 | `matrixcoderain@atifdag.github.io.gnome-42-44.shell-extension.zip` |
+
+GNOME 45 ve GNOME 41 ile öncesi desteklenmez.
+
+1. Sisteminize uyan paketi kurun (örnekte Ubuntu 24.04 ve 26.04 paketi):
 
    ```bash
    gnome-extensions install --force build/gnome/matrixcoderain@atifdag.github.io.shell-extension.zip
@@ -69,11 +81,11 @@ Ubuntu 26.04'ün GNOME masaüstünde ekran koruyucu bir GNOME Shell eklentisidir
 
 Kaldırmak için **Eklentiler** uygulamasından kaldırılır ya da `gnome-extensions uninstall matrixcoderain@atifdag.github.io` çalıştırılır.
 
-## Linux (X11 ve xscreensaver)
+## Diğer Linux masaüstleri (xscreensaver)
 
-Program, xscreensaver'ın açtığı pencereye çizer. Kilit ekranı ve parola xscreensaver'dadır; program kapanırsa veya hata verirse kilit açılmaz.
+Matrix, xscreensaver'ın ekran koruyucularından biri olarak çalışır. Kilit ekranı ve parola xscreensaver'dadır; Matrix kapanırsa veya hata verirse kilit açılmaz.
 
-Bu yol Xfce gibi X11 masaüstleri içindir; Ubuntu 26.04'ün GNOME masaüstünde yukarıdaki eklenti kullanılır. Bir X11 oturumu ve xscreensaver 6 gerekir; Wayland oturumlarında xscreensaver ekranı kilitleyemez. Masaüstünün kendi ekran koruyucusu (ör. xfce4-screensaver, light-locker) kapatılmalıdır. Debian ve Ubuntu'da xscreensaver şöyle kurulur:
+Bu yol Xfce gibi masaüstleri içindir; GNOME'da yukarıdaki eklenti kullanılır. Ubuntu 22.04, Debian 12 veya daha yeni bir sistem, Xorg oturumu ve xscreensaver 6 gerekir; Wayland oturumlarında xscreensaver ekranı kilitleyemez. Masaüstünün kendi ekran koruyucusu (ör. xfce4-screensaver, light-locker) kapatılmalıdır. Debian ve Ubuntu'da xscreensaver şöyle kurulur:
 
 ```bash
 sudo apt-get install xscreensaver
@@ -96,7 +108,7 @@ sudo apt-get install xscreensaver
 
 `xscreensaver-command -activate` ekran koruyucuyu hemen başlatır, `xscreensaver-command -lock` ekranı kilitler. Birden çok ekranda her ekranda ayrı yağmur çizilir.
 
-`-root` seçeneği xscreensaver dışında çalışmaz; masaüstü arka planına çizim yapılmaz.
+Matrix yalnız xscreensaver içinden çalışır; masaüstü arka planı olarak kullanılamaz.
 
 Kaldırmak için `~/.xscreensaver` dosyasına eklenen satır silinir ve program kaldırılır:
 
@@ -116,7 +128,7 @@ Samsung Galaxy cihazlarda **Ayarlar › Ekran › Ekran koruyucu** bölümünden
 
 Android ekran koruyucuyu yalnız telefon şarj olurken başlatır; ekran zaman aşımı dolunca açılır. Pildeyken ekran koruyucu açılmaz; ekran kapanır ya da her zaman açık ekran görünür.
 
-Pil ve ısı için görüntü her iki eksende yarı boyutta, saniyede yaklaşık 15 kare çizilir.
+Pili ve ısınmayı azaltmak için Android'de görüntü biraz daha düşük çözünürlükte ve daha az akıcı çizilir.
 
 Kaldırmak için **Ayarlar › Uygulamalar** bölümünden **Matrix - Kod Yağmuru** kaldırılır ya da bilgisayardan şu komut çalıştırılır:
 
@@ -148,9 +160,5 @@ Projenin lisansı GPL-3.0 veya sonrasıdır; metin [LICENSE](LICENSE) dosyasınd
 |---|---|
 | `NotoSansJP-LICENSE.txt` | Yağmur yazı tipi; Noto Sans JP'den türetilmiştir (SIL Open Font License 1.1) |
 | `SourceSans3-LICENSE.txt` | İmza yazı tipi; Source Sans 3'ten türetilmiştir (SIL Open Font License 1.1) |
-| `RustCrates-LICENSE.txt` | Programa derlenen Rust kitaplıkları ve Rust standart kitaplığı |
-| `Kotlin-LICENSE.txt` | Android uygulamasındaki Kotlin standart kitaplığı (Apache 2.0) |
-
-## Geliştirme
-
-Derleme, testler ve cihazda deneme [DEVELOPMENT.md](DEVELOPMENT.md) dosyasındadır.
+| `RustCrates-LICENSE.txt` | Programın içindeki açık kaynak kitaplıklar |
+| `Kotlin-LICENSE.txt` | Android uygulamasının içindeki açık kaynak kitaplık (Apache 2.0) |

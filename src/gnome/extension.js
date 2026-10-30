@@ -5,6 +5,8 @@
 // veya fare hareketiyle kendini kapatır. GNOME ekranı karartmaya veya
 // kilitlemeye başlayınca program kapatılır. Kilit, parola ve ekranın
 // kapanması GNOME'un işidir; eklenti bunlara dokunmaz.
+//
+// GNOME 46–50 içindir; Wayland ve X11 oturumlarında çalışır.
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
@@ -16,13 +18,59 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 /** Programın kapatılırken aldığı sinyal (SIGTERM). */
 const SIGTERM = 15;
 
+/** Oturum Wayland mı? GNOME 50 yalnız Wayland'dir ve bu soruyu soran
+ * işlevi kaldırmıştır. */
+function isWayland() {
+    return Meta.is_wayland_compositor?.() ?? true;
+}
+
+/**
+ * Programı başlatır. Dönen nesne programın sürecini ve pencerelerini tanıma,
+ * pencere listesinden gizleme işlevlerini taşır. Üç yol vardır:
+ *
+ * - Wayland, GNOME 49 ve sonrası: `Meta.WaylandClient.new_subprocess`.
+ * - Wayland, GNOME 46–48: `Meta.WaylandClient.new` ve `spawnv`.
+ * - X11: Program sıradan bir alt süreç olarak başlar; pencereleri süreç
+ *   numarasıyla tanınır. X11'de pencere listesinden gizleme yoktur.
+ *
+ * Wayland'de program, GNOME'un açtığı özel bir bağlantıyla başlar; böylece
+ * pencereleri kesin olarak tanınır.
+ */
+function launch(argv) {
+    const launcher = new Gio.SubprocessLauncher({flags: Gio.SubprocessFlags.NONE});
+    if (!isWayland()) {
+        const subprocess = launcher.spawnv(argv);
+        // Süreç numarası bilinmeyen pencereler 0 döndürür; onlar sahiplenilmez.
+        const pid = Number(subprocess.get_identifier());
+        return {
+            subprocess,
+            owns: window => pid > 0 && window.get_pid() === pid,
+            hide: () => {},
+        };
+    }
+    if (Meta.WaylandClient.new_subprocess) {
+        const client = Meta.WaylandClient.new_subprocess(global.context, launcher, argv);
+        return {
+            subprocess: client.get_subprocess(),
+            owns: window => client.owns_window(window),
+            hide: window => window.hide_from_window_list(),
+        };
+    }
+    const client = Meta.WaylandClient.new(global.context, launcher);
+    return {
+        subprocess: client.spawnv(global.display, argv),
+        owns: window => client.owns_window(window),
+        hide: window => client.hide_from_window_list(window),
+    };
+}
+
 export default class MatrixExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
         this._idleMonitor = global.backend.get_core_idle_monitor();
         this._idleWatch = 0;
-        // Çalışan programın GNOME tarafındaki bağlantısı; program yoksa boştur.
-        this._client = null;
+        // Çalışan program (bkz. launch); program yoksa boştur.
+        this._program = null;
 
         this._watchIdle();
         this._settings.connectObject('changed::start-delay', () => this._watchIdle(), this);
@@ -52,21 +100,17 @@ export default class MatrixExtension extends Extension {
     /** Ekran koruyucuyu başlatır. Video izlenirken olduğu gibi bir uygulama
      * boşta kalmayı engellediyse veya ekran zaten kilitliyse başlamaz. */
     async _start() {
-        if (this._client || Main.screenShield.active || Main.sessionMode.isLocked)
+        if (this._program || Main.screenShield.active || Main.sessionMode.isLocked)
             return;
         // Beklerken eklenti kapatılmış veya program başlamış olabilir.
-        if (await this._idleInhibited() || this._client || !this._settings)
+        if (await this._idleInhibited() || this._program || !this._settings)
             return;
         try {
-            // Program, GNOME'un açtığı özel bir Wayland bağlantısıyla başlar;
-            // böylece pencereleri kesin olarak tanınır.
-            const program = GLib.build_filenamev([this.path, 'matrixcoderain']);
-            const launcher = new Gio.SubprocessLauncher({flags: Gio.SubprocessFlags.NONE});
-            const client = Meta.WaylandClient.new_subprocess(global.context, launcher, [program, '/s']);
-            this._client = client;
-            client.get_subprocess().wait_async(null, () => {
-                if (this._client === client)
-                    this._client = null;
+            const program = launch([GLib.build_filenamev([this.path, 'matrixcoderain']), '/s']);
+            this._program = program;
+            program.subprocess.wait_async(null, () => {
+                if (this._program === program)
+                    this._program = null;
             });
         } catch (e) {
             console.error(`Matrix - Kod Yağmuru başlatılamadı: ${e.message}`);
@@ -92,9 +136,9 @@ export default class MatrixExtension extends Extension {
     /** Programın açtığı pencereyi pencere listesinden gizler, en üste alır ve
      * etkinleştirir; böylece ilk tuş ve fare hareketi programa gider. */
     _adopt(window) {
-        if (!this._client?.owns_window(window))
+        if (!this._program?.owns(window))
             return;
-        window.hide_from_window_list();
+        this._program.hide(window);
         window.make_above();
         const shownId = window.connect('shown', () => {
             window.disconnect(shownId);
@@ -104,7 +148,7 @@ export default class MatrixExtension extends Extension {
 
     /** Çalışan programı kapatır. */
     _stop() {
-        this._client?.get_subprocess().send_signal(SIGTERM);
-        this._client = null;
+        this._program?.subprocess.send_signal(SIGTERM);
+        this._program = null;
     }
 }

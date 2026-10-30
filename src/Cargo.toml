@@ -41,7 +41,12 @@ tiny-skia = { version = "0.11", default-features = false, features = ["std"] }
 fontdue = "0.9"
 ttf-parser = "0.25"
 font8x8 = { version = "0.3", features = ["unicode"] }
-winit = { version = "0.30", optional = true }
+# winit'in Adwaita görünümlü Wayland pencere çerçevesi (wayland-csd-adwaita)
+# kapalıdır. O çerçeve, temayı okumak için alt süreç başlatır; bu da Linux
+# programına glibc 2.39 ihtiyacı ekler ve programı Ubuntu 22.04'te açılmaz
+# yapar. Ekran koruyucu pencereleri çerçevesizdir; yalnız Wayland'deki deneme
+# penceresi (/w) düz yedek çerçeveyle açılır.
+winit = { version = "0.30", optional = true, default-features = false, features = ["rwh_06", "x11", "wayland", "wayland-dlopen"] }
 softbuffer = { version = "0.4", optional = true }
 chrono = { version = "0.4", default-features = false, features = ["clock"], optional = true }
 
