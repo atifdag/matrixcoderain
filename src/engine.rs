@@ -12,8 +12,9 @@ const STEP: Duration = Duration::from_millis(40);
 /// Tek çağrıda kabul edilen en uzun süre. Uzun bir bekleme, yüzlerce adımın
 /// bir anda hesaplanmasına ve yağmurun ileri sıçramasına yol açmasın.
 const MAX_ELAPSED: Duration = Duration::from_millis(250);
-/// En büyük görüntü 16.777.216 pikseldir (yaklaşık 64 MiB bellek).
-pub const MAX_PIXELS: usize = 16_777_216;
+/// 7680×4320 ve 8192×4320 ekranlar kabul edilir. En büyük görüntünün
+/// dört baytlık pikselleri 135 MiB bellek kullanır.
+pub const MAX_PIXELS: usize = 8192 * 4320;
 /// Bir kenar en çok bu kadar piksel olabilir.
 const MAX_SIDE: u32 = 16_384;
 /// Çizim süresi istatistiği son bu kadar kareden hesaplanır.

@@ -13,6 +13,7 @@ use std::{
 use winit::{
     application::ApplicationHandler,
     dpi::{LogicalSize, PhysicalPosition, PhysicalSize},
+    error::OsError,
     event::{ElementState, StartCause, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     keyboard::{Key, NamedKey},
@@ -43,34 +44,41 @@ const FOCUS_GRACE: Duration = Duration::from_millis(1500);
 /// Çalışırken sayaçların sorun giderme kaydına yazılma aralığı.
 const REPORT_INTERVAL: Duration = Duration::from_secs(60);
 
-/// Ekran koruyucu penceresinin özellikleri (Windows).
-///
-/// Windows'ta `winit`'in tam ekran kipi kullanılmaz: winit, pencereyi öne getirmek
-/// için sahte bir Alt tuşu basıp bırakır. Türkçe gibi AltGr'li klavye
-/// düzenlerinde bu sağ Alt olarak gelir ve ekran koruyucu daha açılır açılmaz
-/// "tuşa basıldı" diye kapanır. Bunun yerine ekranı tam örten, çerçevesiz ve
-/// her zaman üstte duran bir pencere açılır.
-#[cfg(windows)]
-fn saver_attributes(base: WindowAttributes, monitor: Option<MonitorHandle>) -> WindowAttributes {
-    use winit::platform::windows::WindowAttributesExtWindows;
+/// Hedef monitörün tamamını kaplayan bir pencere açar.
+fn saver_window(
+    event_loop: &ActiveEventLoop,
+    base: WindowAttributes,
+    monitor: Option<MonitorHandle>,
+) -> Result<Window, OsError> {
     let attrs = base
         .with_decorations(false)
-        .with_window_level(WindowLevel::AlwaysOnTop)
-        .with_resizable(false)
-        .with_undecorated_shadow(false);
-    match monitor {
-        Some(m) => attrs.with_position(m.position()).with_inner_size(m.size()),
-        None => attrs.with_fullscreen(Some(Fullscreen::Borderless(None))),
-    }
-}
+        .with_window_level(WindowLevel::AlwaysOnTop);
 
-/// Ekran koruyucu penceresinin özellikleri (macOS ve Linux): işletim sisteminin
-/// kendi çerçevesiz tam ekran kipi kullanılır.
-#[cfg(not(windows))]
-fn saver_attributes(base: WindowAttributes, monitor: Option<MonitorHandle>) -> WindowAttributes {
-    base.with_decorations(false)
-        .with_window_level(WindowLevel::AlwaysOnTop)
-        .with_fullscreen(Some(Fullscreen::Borderless(monitor)))
+    #[cfg(windows)]
+    {
+        use winit::platform::windows::WindowAttributesExtWindows;
+
+        let visible = attrs.visible;
+        let mut attrs = attrs
+            .with_resizable(false)
+            .with_undecorated_shadow(false)
+            .with_visible(false);
+        if let Some(target) = &monitor {
+            attrs = attrs.with_position(target.position());
+        }
+
+        // Önce hedef monitöre yerleşir, sonra çerçevesiz tam ekrana geçeriz.
+        // Böylece Windows ölçek değiştiğinde tam ekranın piksel boyutunu korur.
+        // Tam ekranı pencere açıldıktan sonra seçmek, winit'in açılışta
+        // gönderdiği ve AltGr olarak algılanabilen yapay tuşu da önler.
+        let window = event_loop.create_window(attrs)?;
+        window.set_fullscreen(Some(Fullscreen::Borderless(monitor)));
+        window.set_visible(visible);
+        Ok(window)
+    }
+
+    #[cfg(not(windows))]
+    event_loop.create_window(attrs.with_fullscreen(Some(Fullscreen::Borderless(monitor))))
 }
 
 /// Pencereye görüntü yazmak için kullanılan yüzey.
@@ -251,15 +259,9 @@ pub fn run(mode: Mode, font: Option<PathBuf>) -> Result<(), String> {
 }
 
 impl App {
-    /// Pencereyi açar ve ona her açılışta farklı yağmur üreten bir motor bağlar.
-    fn add_window(
-        &mut self,
-        event_loop: &ActiveEventLoop,
-        attrs: WindowAttributes,
-    ) -> Result<(), String> {
-        let window = event_loop
-            .create_window(attrs)
-            .map_err(|e| format!("Pencere açılamadı: {e}"))?;
+    /// Açılan pencereye her açılışta farklı yağmur üreten bir motor bağlar.
+    fn add_window(&mut self, window: Result<Window, OsError>) -> Result<(), String> {
+        let window = window.map_err(|e| format!("Pencere açılamadı: {e}"))?;
         let seed = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
@@ -273,17 +275,16 @@ impl App {
     fn create_windows(&mut self, event_loop: &ActiveEventLoop) -> Result<(), String> {
         let base = || Window::default_attributes().with_title(APP_NAME);
         match self.mode {
-            Mode::Window => self.add_window(
-                event_loop,
+            Mode::Window => self.add_window(event_loop.create_window(
                 base().with_inner_size(LogicalSize::new(WINDOW_WIDTH, WINDOW_HEIGHT)),
-            )?,
+            ))?,
             Mode::Saver => {
                 let monitors: Vec<_> = event_loop.available_monitors().collect();
                 if monitors.is_empty() {
-                    self.add_window(event_loop, saver_attributes(base(), None))?;
+                    self.add_window(saver_window(event_loop, base(), None))?;
                 }
                 for monitor in monitors {
-                    self.add_window(event_loop, saver_attributes(base(), Some(monitor)))?;
+                    self.add_window(saver_window(event_loop, base(), Some(monitor)))?;
                 }
                 for view in self.views.values() {
                     view.window.set_cursor_visible(false);
@@ -297,7 +298,7 @@ impl App {
                     .with_decorations(false)
                     .with_position(PhysicalPosition::new(0, 0))
                     .with_inner_size(PhysicalSize::new(w, h));
-                self.add_window(event_loop, attrs)?;
+                self.add_window(event_loop.create_window(attrs))?;
             }
         }
         Ok(())
@@ -504,5 +505,75 @@ impl ApplicationHandler for App {
 
             _ => {}
         }
+    }
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::*;
+    use windows_sys::Win32::{
+        Foundation::RECT,
+        UI::WindowsAndMessaging::{SendMessageW, WM_DPICHANGED},
+    };
+    use winit::{
+        platform::windows::EventLoopBuilderExtWindows,
+        raw_window_handle::{HasWindowHandle, RawWindowHandle},
+    };
+
+    /// Windows %125'ten %100'e geçerken pencereyi küçültmeyi önerebilir.
+    /// Tam ekran penceresi bu öneriden sonra da monitörün tamamını kaplamalıdır.
+    #[test]
+    fn fullscreen_keeps_monitor_bounds_when_scaling_changes() {
+        struct Check;
+
+        impl ApplicationHandler for Check {
+            fn window_event(&mut self, _: &ActiveEventLoop, _: WindowId, _: WindowEvent) {}
+
+            fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+                let monitors: Vec<_> = event_loop.available_monitors().collect();
+                assert!(!monitors.is_empty(), "Windows monitör bildirmedi.");
+                for monitor in monitors {
+                    let window = saver_window(
+                        event_loop,
+                        Window::default_attributes().with_visible(false),
+                        Some(monitor.clone()),
+                    )
+                    .expect("Deneme penceresi açılamadı.");
+                    let handle = window.window_handle().unwrap();
+                    let RawWindowHandle::Win32(handle) = handle.as_raw() else {
+                        panic!("Windows pencere kimliği alınamadı.");
+                    };
+                    let position = monitor.position();
+                    let size = monitor.size();
+                    assert_eq!(window.inner_size(), size);
+                    assert_eq!(window.outer_position().unwrap(), position);
+
+                    for (dpi, numerator, denominator) in [(120, 5, 4), (96, 4, 5)] {
+                        let suggestion = RECT {
+                            left: position.x,
+                            top: position.y,
+                            right: position.x + size.width as i32 * numerator / denominator,
+                            bottom: position.y + size.height as i32 * numerator / denominator,
+                        };
+                        // İleti eşzamanlı işlenir ve yalnız bu testin penceresine gider.
+                        unsafe {
+                            SendMessageW(
+                                handle.hwnd.get() as _,
+                                WM_DPICHANGED,
+                                dpi | (dpi << 16),
+                                (&suggestion as *const RECT) as isize,
+                            );
+                        }
+                        assert_eq!(window.inner_size(), size, "Ölçek değişince boyut değişti.");
+                        assert_eq!(window.outer_position().unwrap(), position);
+                    }
+                }
+                event_loop.exit();
+            }
+        }
+
+        let mut builder = EventLoop::builder();
+        builder.with_any_thread(true);
+        builder.build().unwrap().run_app(&mut Check).unwrap();
     }
 }

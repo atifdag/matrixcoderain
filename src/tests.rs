@@ -1,6 +1,6 @@
 //! Aynı girdilerin aynı sonucu verdiğini ve duraklamada iş yapılmadığını sınar.
 use crate::{Engine, Error, Fonts, TimeOfDay};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// 160x120 boyutunda, sabit başlangıç sayılı ve çalışır durumda bir motor.
 fn engine() -> Engine {
@@ -81,6 +81,65 @@ fn midnight_redraw_and_input_limits() {
     assert_eq!(frame(&mut e).len(), 1);
     assert!(Fonts::from_bytes(Some("bozuk yazı tipi".as_bytes())).is_err());
     assert!(TimeOfDay::new(23, 60, 0).is_err());
+}
+
+/// Çözünürlük değiştiğinde motor bütün pikselleri yazmalı ve saati ortada tutmalı.
+#[test]
+fn display_resolutions_render_the_entire_frame() {
+    let resolutions = [
+        (720, 480),   // SD
+        (720, 576),   // SD
+        (1280, 720),  // HD
+        (1366, 768),  // HD dizüstü ekranı
+        (1920, 1080), // Full HD
+        (2048, 1080), // 2K
+        (2560, 1440), // QHD
+        (2880, 1800), // 3K
+        (3200, 1800), // 3K sınıfı
+        (3840, 2160), // 4K UHD
+        (4096, 2160), // 4K
+        (2160, 3840), // Dikey 4K
+        (7680, 4320), // 8K UHD
+        (8192, 4320), // 8K
+    ];
+    let mut e = engine();
+    let time = TimeOfDay::new(12, 34, 56).unwrap();
+    let (r, g, b) = crate::config::CLOCK;
+    let clock_color = u32::from_be_bytes([0, r, g, b]);
+
+    for (width, height) in resolutions {
+        e.resize(width, height)
+            .unwrap_or_else(|error| panic!("{width}×{height}: {error}"));
+        for _ in 0..80 {
+            e.update(Duration::from_millis(40), time);
+        }
+        let (w, h) = (width as usize, height as usize);
+        let end = w * h;
+        let mut pixels = vec![u32::MAX; end + 1];
+        let start = Instant::now();
+        e.render(&mut pixels).unwrap();
+        println!(
+            "{width}×{height}: {:.2} ms",
+            start.elapsed().as_secs_f64() * 1000.0
+        );
+        assert!(
+            !pixels[..end].contains(&u32::MAX),
+            "{width}×{height}: yazılmayan piksel var"
+        );
+        assert_eq!(
+            pixels[end],
+            u32::MAX,
+            "{width}×{height}: görüntü alanı aşıldı"
+        );
+        assert!(
+            (h / 4..3 * h / 4)
+                .any(|y| { pixels[y * w + w / 4..y * w + 3 * w / 4].contains(&clock_color) }),
+            "{width}×{height}: saat orta bölgede görünmüyor"
+        );
+    }
+
+    assert_eq!(e.resize(8192, 4321), Err(Error::InvalidSize));
+    assert_eq!(e.size(), (8192, 4320));
 }
 
 /// Küçültülmüş yağmur yazı tipi yağmurun bütün harflerini, imza yazı tipi de
